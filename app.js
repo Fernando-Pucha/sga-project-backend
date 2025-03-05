@@ -3,7 +3,12 @@
 require("dotenv").config();
 
 // ℹ️ Connects to the database
-require("./db");
+require("./db/index");
+
+// Dar acceso a los modelos desde Atlas
+require("./models/Course.model");
+require("./models/User.model");
+require("./models/Enrollment.model");
 
 // Handles http requests (express is node js framework)
 // https://www.npmjs.com/package/express
