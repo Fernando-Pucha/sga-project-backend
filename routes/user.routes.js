@@ -122,15 +122,15 @@ router.get("/profile", isAuth, (req, res) => {
         });
 });
 
-// Actualizar perfil del usuario autenticado
 router.put("/profile", isAuth, (req, res) => {
-    const { email, name, password } = req.body;
+    const { email, name, password, role} = req.body;
     const updateData = {};
     if (email) updateData.email = email;
     if (name) updateData.name = name;
-
+    if (role) updateData.role = role;
+    
     if (password) {
-        // Si se envía una nueva contraseña, se debe encriptar
+
         bcrypt.hash(password, saltRounds)
             .then((hashedPassword) => {
                 updateData.password = hashedPassword;
@@ -206,6 +206,47 @@ router.delete("/userdelete/:usersId", isAuth, isAdmin, (req, res) => {
             res.status(500).json({ message: "Error deleting user" });
         });
 });
+
+// Actualizar usuario (solo admin)
+router.put("/userupdate/:userId", isAuth, isAdmin, (req, res) => {
+    const { userId } = req.params;
+    const { email, name, password, role } = req.body;
+
+    // Datos a actualizar
+    const updateData = {};
+    if (email) updateData.email = email;
+    if (name) updateData.name = name;
+    if (role) updateData.role = role;
+
+    if (password) {
+        bcrypt.hash(password, saltRounds)
+            .then((hashedPassword) => {
+                updateData.password = hashedPassword;
+                // Actualizar el usuario en la base de datos
+                return User.findByIdAndUpdate(userId, updateData, { new: true });
+            })
+            .then((updatedUser) => {
+                if (!updatedUser) return res.status(404).json({ message: "User not found" });
+                res.status(200).json({ message: "User updated successfully", user: updatedUser });
+            })
+            .catch((error) => {
+                console.error("Error updating user:", error.message);
+                res.status(500).json({ message: "Error updating user" });
+            });
+    } else {
+
+        User.findByIdAndUpdate(userId, updateData, { new: true })
+            .then((updatedUser) => {
+                if (!updatedUser) return res.status(404).json({ message: "User not found" });
+                res.status(200).json({ message: "User updated successfully", user: updatedUser });
+            })
+            .catch((error) => {
+                console.error("Error updating user:", error.message);
+                res.status(500).json({ message: "Error updating user" });
+            });
+    }
+});
+
 
 // Verificación del usuario autenticado
 router.get("/verify", isAuthenticated, (req, res, next) => {
