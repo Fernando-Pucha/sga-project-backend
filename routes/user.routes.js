@@ -158,23 +158,8 @@ router.put("/profile", isAuth, (req, res) => {
     }
 });
 
-// Eliminar usuario (solo admin)
-router.delete("/users/:usersId", isAuth, isAdmin,(req, res) => {
-    const usersId = req.params.usersId;
-    User
-        .findByIdAndDelete(usersId)
-        .then((deletedUser) => {
-            if (!deletedUser) return res.status(404).json({ message: "User not found" });
-            res.status(200).json({ message: "User deleted successfully" });
-        })
-        .catch((error) => {
-            console.error("Error deleting user:", error.message);
-            res.status(500).json({ message: "Error deleting user" });
-        });
-});
-
 // Obtener todos los usuarios
-router.get("/users", isAuth, (req, res) => {
+router.get("/users", isAuth, isAdmin, (req, res) => {
     User
         .find()
         .select("-password")
@@ -190,6 +175,37 @@ router.get("/users", isAuth, (req, res) => {
         });
 });
 
+// Ruta para que un admin vea el detalle de un usuario
+router.get("/userdetail/:userId", isAuth, isAdmin, (req, res) => {
+    const userId = req.params.userId;
+    User
+        .findById(userId)
+        .then(user => {
+            if (!user) {
+                return res.status(404).json({ message: "No users found" });
+            }
+            res.status(200).json(user);
+        })
+        .catch(error => {
+            console.error("Error searching for user:", error.message);
+            res.status(500).json({ message: "Internal error while getting user" });
+        });
+});
+
+// Eliminar usuario (solo admin)
+router.delete("/userdelete/:usersId", isAuth, isAdmin, (req, res) => {
+    const usersId = req.params.usersId;
+    User
+        .findByIdAndDelete(usersId)
+        .then((deletedUser) => {
+            if (!deletedUser) return res.status(404).json({ message: "User not found" });
+            res.status(200).json({ message: "User deleted successfully" });
+        })
+        .catch((error) => {
+            console.error("Error deleting user:", error.message);
+            res.status(500).json({ message: "Error deleting user" });
+        });
+});
 
 // Verificación del usuario autenticado
 router.get("/verify", isAuthenticated, (req, res, next) => {
