@@ -209,7 +209,7 @@ router.delete("/userdelete/:usersId", isAuth, isAdmin, (req, res) => {
 
 // Actualizar usuario (solo admin)
 router.put("/userupdate/:userId", isAuth, isAdmin, (req, res) => {
-    const { userId } = req.params;
+    const userId = req.params.userId;
     const { email, name, password, role } = req.body;
 
     // Datos a actualizar

@@ -5,7 +5,7 @@ const { isAuth, isProfessor } = require("../middleware/auth.middleware.js");  //
 const router = express.Router();
 
 // Ruta para crear un curso (solo accesible por profesores)
-router.post('/course', isAuth, isProfessor, (req, res) => {
+/* router.post('/course', isAuth, isProfessor, (req, res) => {
     const { title, description, lessons } = req.body;
     Course
         .create({ title, description, lessons, professor: req.user._id })
@@ -17,6 +17,50 @@ router.post('/course', isAuth, isProfessor, (req, res) => {
             console.log("Error while creating the course", error.message);
             res.status(500).json({ error: "Internal Server Error, not create course" });
         });
+});
+ */
+// Ruta para crear un curso (accesible por profesores y administradores)
+router.post('/course', isAuth, isProfessorOrAdmin, (req, res) => {
+    const { title, description, lessons, professorId } = req.body;
+
+    // Si el usuario es admin, podemos asignar un profesor diferente
+    // Si el usuario es un profesor, asignamos automáticamente su ID
+    const professor = req.user.role === 'admin' ? professorId : req.user._id;
+
+    // Verificamos si el profesor existe en la base de datos (solo si el usuario es admin)
+    if (req.user.role === 'admin' && professorId) {
+        User.findById(professorId)
+            .then(professor => {
+                if (!professor) {
+                    return res.status(404).json({ message: "Professor not found" });
+                }
+
+                // Si el profesor existe, creamos el curso
+                Course.create({ title, description, lessons, professor })
+                    .then((createCourse) => {
+                        console.log("Course created");
+                        res.status(201).json(createCourse);
+                    })
+                    .catch((error) => {
+                        console.log("Error while creating the course", error.message);
+                        res.status(500).json({ error: "Internal Server Error, not create course" });
+                    });
+            })
+            .catch((error) => {
+                res.status(500).json({ error: "Error while finding professor" });
+            });
+    } else {
+        // Si el usuario es un profesor, asignamos su propio ID como el profesor
+        Course.create({ title, description, lessons, professor })
+            .then((createCourse) => {
+                console.log("Course created");
+                res.status(201).json(createCourse);
+            })
+            .catch((error) => {
+                console.log("Error while creating the course", error.message);
+                res.status(500).json({ error: "Internal Server Error, not create course" });
+            });
+    }
 });
 
 // Ruta para obtener todos los cursos
