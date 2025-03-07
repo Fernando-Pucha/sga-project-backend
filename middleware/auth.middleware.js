@@ -54,4 +54,21 @@ const isAdmin = (req, res, next) => {
         });
 };
 
-module.exports = { isAuth, isProfessor, isAdmin };
+// Middleware para verificar si el usuario es un administrador
+const isProfessorOrAdmin = (req, res, next) => {
+    const userId = req.user._id;
+    User
+        .findById(userId)
+        .then((user) => {
+            if (!user || user.role !== 'admin'|| user.role !== 'profesor') {
+                return res.status(403).json({ message: "You are not authorized to perform this action, only admins or profesor" });
+            }
+            next();
+        })
+        .catch((error) => {
+            console.log("Error checking user role", error.message);
+            res.status(500).json({ error: "Internal Server Error" });
+        });
+};
+
+module.exports = { isAuth, isProfessor, isAdmin, isProfessorOrAdmin };

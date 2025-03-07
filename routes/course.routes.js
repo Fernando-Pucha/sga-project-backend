@@ -13,7 +13,7 @@ router.post('/course', isAuth, isProfessor, (req, res) => {
             console.log("Course created");
             res.status(201).json(createCourse);
         })
-        .catch((error) => {  // Cambié `err` por `error`
+        .catch((error) => {
             console.log("Error while creating the course", error.message);
             res.status(500).json({ error: "Internal Server Error, not create course" });
         });
@@ -27,7 +27,7 @@ router.get('/course', (req, res) => {
         .then((courses) => {
             res.status(200).json(courses);
         })
-        .catch((error) => {  // Cambié `err` por `error`
+        .catch((error) => {
             console.log("Error while finding the course", error.message);
             res.status(500).json({ error: "Failed to retrieve courses" });
         });
@@ -43,7 +43,7 @@ router.get('/course/:courseId', (req, res) => {
             if (!course) return res.status(404).json({ message: "Course not found" });
             res.status(200).json(course);
         })
-        .catch((error) => {  // Cambié `err` por `error`
+        .catch((error) => {
             console.log("Error searching for course by id", error.message);
             res.status(500).json({ message: "Failed to retrieve course id" });
         });
@@ -51,7 +51,7 @@ router.get('/course/:courseId', (req, res) => {
 
 // Ruta para actualizar un curso (solo accesible por el profesor que creó el curso)
 router.put('/course/:courseId', isAuth, isProfessor, (req, res) => {
-    const { title, description, lessons } = req.body;  // Asegúrate de extraer los datos de req.body
+    const { title, description, lessons } = req.body;
     const courseId = req.params.courseId;
     Course
         .findByIdAndUpdate(courseId, { title, description, lessons }, { new: true })
@@ -60,7 +60,7 @@ router.put('/course/:courseId', isAuth, isProfessor, (req, res) => {
             console.log("Course updated");
             res.status(200).json(updatedCourse);
         })
-        .catch((error) => {  // Cambié `err` por `error`
+        .catch((error) => {
             console.log("Error while updating the course", error.message);
             res.status(500).json({ message: "Error while updating the course" });
         });
@@ -75,7 +75,7 @@ router.delete('/course/:courseId', isAuth, isProfessor, (req, res) => {
             if (!deletedCourse) return res.status(404).json({ message: "Course not found" });
             res.status(200).json({ message: "Course deleted successfully" });
         })
-        .catch((error) => {  // Cambié `err` por `error`
+        .catch((error) => {
             console.log("Error deleting course", error.message);
             res.status(500).json({ error: "Failed to delete course" });
         });

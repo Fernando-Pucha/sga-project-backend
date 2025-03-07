@@ -7,7 +7,7 @@ const router = express.Router();
 // Ruta para inscribir a un estudiante a un curso
 router.post('/enroll', isAuth, (req, res) => {
     const { courseId } = req.body;
-    const studentId = req.user._id;  // Obtenemos el ID del estudiante desde el JWT o sesión
+    const studentId = req.user._id;  
 
     Enrollment
         .create({ student: studentId, course: courseId })

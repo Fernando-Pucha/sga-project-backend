@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User.model.js");
-const { isAuth, isAdmin } = require("../middleware/auth.middleware.js");
+const { isAuth, isAdmin, isProfessorOrAdmin } = require("../middleware/auth.middleware.js");
 const { isAuthenticated } = require("../middleware/jwt.middleware.js");
 
 const saltRounds = 10;
@@ -170,6 +170,23 @@ router.delete("/users/:usersId", isAuth, isAdmin,(req, res) => {
         .catch((error) => {
             console.error("Error deleting user:", error.message);
             res.status(500).json({ message: "Error deleting user" });
+        });
+});
+
+// Obtener todos los usuarios
+router.get("/users", isAuth, (req, res) => {
+    User
+        .find()
+        .select("-password")
+        .then((users) => {
+            if (users.length === 0) {
+                return res.status(404).json({ message: "No users found" });
+            }
+            res.status(200).json(users);
+        })
+        .catch((error) => {
+            console.error("Error retrieving users:", error.message);
+            res.status(500).json({ message: "Error retrieving users" });
         });
 });
 
