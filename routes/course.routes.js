@@ -3,6 +3,7 @@ const { isAuth, isProfessor, isProfessorOrAdmin } = require("../middleware/auth.
 const Course = require("../models/Course.model.js");
 const User = require("../models/User.model.js");
 const Lesson = require("../models/Lesson.model.js");
+const mongoose = require('mongoose');
 
 const router = express.Router();
 
@@ -10,8 +11,14 @@ const router = express.Router();
 router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
     const { title, description, professorId } = req.body;
 
+    // Verificamos si el usuario es admin y si profesorId está presente
+    if (req.user.role === 'admin' && !professorId) {
+        return res.status(400).json({ message: "Professor ID is required for admins" });
+    }
+
     // Si el usuario es admin, podemos asignar un profesor diferente
     // Si el usuario es un profesor, asignamos automáticamente su ID
+    
     const professor = req.user.role === 'admin' ? professorId : req.user._id;
 
     // Verificamos si el profesor existe en la base de datos (solo si el usuario es admin)
@@ -65,11 +72,11 @@ router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
 });
 
 // Ruta para obtener todos los cursos
-router.get('/allcourse', isAuth, (req, res) => {
+router.get('/courses', isAuth, (req, res) => {
     Course
         .find({})
         .populate("professor", "name")
-        .populate("lessons") 
+        /* .populate("lessons")  */
         .then((courses) => {
             res.status(200).json(courses);
         })
@@ -85,7 +92,7 @@ router.get('/:courseId', isAuth, (req, res) => {
     Course
         .findById(courseId)
         .populate("professor", "name")
-        .populate("lessons")
+        /*  .populate("lessons") */
         .then((course) => {
             if (!course) return res.status(404).json({ message: `Course with ID ${courseId} not found` });
             res.status(200).json(course);
@@ -95,6 +102,29 @@ router.get('/:courseId', isAuth, (req, res) => {
             res.status(500).json({ message: "Failed to retrieve course id" });
         });
 });
+
+// Ruta para obtener todos los cursos de un profesor logueado
+router.get('/mycourses', isAuth, isProfessor, (req, res) => {
+
+    const userId = req.user._id;
+
+    Course
+        .find({ professor: userId })
+        .populate('course')
+        .then((courses) => {
+            if (!courses || courses.length === 0) {
+                return res.status(404).json({ message: "No courses found for this professor" });
+            }
+            res.status(200).json(courses);
+        })
+        .catch((error) => {
+            console.log("Error while fetching professor's courses", error.message);
+            res.status(500).json({ error: "Failed to retrieve courses" });
+        });
+});
+
+
+
 
 // Ruta para actualizar un curso por ID (profesor puede actualizar título y descripción, admin puede actualizar todo)
 router.put('/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {
@@ -113,7 +143,7 @@ router.put('/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {
             }
 
             if (req.user.role === 'admin' && professor) {
-                course.professor = professor;  
+                course.professor = professor;
             }
 
             course.title = title || course.title;
