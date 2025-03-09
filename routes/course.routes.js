@@ -1,27 +1,14 @@
 const express = require("express");
-const Course = require("../models/Course.model.js");  // Importamos el modelo de Course
-const { isAuth, isProfessor } = require("../middleware/auth.middleware.js");  // Middleware para verificar roles
+const { isAuth, isProfessor, isProfessorOrAdmin } = require("../middleware/auth.middleware.js");
+const Course = require("../models/Course.model.js");
+const User = require("../models/User.model.js");
+const Lesson = require("../models/Lesson.model.js");
 
 const router = express.Router();
 
-// Ruta para crear un curso (solo accesible por profesores)
-/* router.post('/course', isAuth, isProfessor, (req, res) => {
-    const { title, description, lessons } = req.body;
-    Course
-        .create({ title, description, lessons, professor: req.user._id })
-        .then((createCourse) => {
-            console.log("Course created");
-            res.status(201).json(createCourse);
-        })
-        .catch((error) => {
-            console.log("Error while creating the course", error.message);
-            res.status(500).json({ error: "Internal Server Error, not create course" });
-        });
-});
- */
 // Ruta para crear un curso (accesible por profesores y administradores)
-router.post('/course', isAuth, isProfessorOrAdmin, (req, res) => {
-    const { title, description, lessons, professorId } = req.body;
+router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
+    const { title, description, professorId } = req.body;
 
     // Si el usuario es admin, podemos asignar un profesor diferente
     // Si el usuario es un profesor, asignamos automáticamente su ID
@@ -29,17 +16,30 @@ router.post('/course', isAuth, isProfessorOrAdmin, (req, res) => {
 
     // Verificamos si el profesor existe en la base de datos (solo si el usuario es admin)
     if (req.user.role === 'admin' && professorId) {
-        User.findById(professorId)
+        User
+            .findById(professorId)
             .then(professor => {
                 if (!professor) {
                     return res.status(404).json({ message: "Professor not found" });
                 }
 
                 // Si el profesor existe, creamos el curso
-                Course.create({ title, description, lessons, professor })
+                Course
+                    .create({ title, description, professor })
                     .then((createCourse) => {
-                        console.log("Course created");
-                        res.status(201).json(createCourse);
+
+                        // Devolver el curso con el ID del profesor
+                        Course
+                            .findById(createCourse._id)
+                            .populate('professor', '_id')
+                            .then((courseWithProfessorId) => {
+                                console.log("Course created with professor id only");
+                                res.status(201).json(courseWithProfessorId);
+                            })
+                            .catch((error) => {
+                                console.log("Error while fetching course with populated professor", error.message);
+                                res.status(500).json({ error: "Internal Server Error" });
+                            });
                     })
                     .catch((error) => {
                         console.log("Error while creating the course", error.message);
@@ -51,7 +51,8 @@ router.post('/course', isAuth, isProfessorOrAdmin, (req, res) => {
             });
     } else {
         // Si el usuario es un profesor, asignamos su propio ID como el profesor
-        Course.create({ title, description, lessons, professor })
+        Course
+            .create({ title, description, professor })
             .then((createCourse) => {
                 console.log("Course created");
                 res.status(201).json(createCourse);
@@ -64,10 +65,11 @@ router.post('/course', isAuth, isProfessorOrAdmin, (req, res) => {
 });
 
 // Ruta para obtener todos los cursos
-router.get('/course', (req, res) => {
+router.get('/allcourse', isAuth, (req, res) => {
     Course
         .find({})
         .populate("professor", "name")
+        .populate("lessons") 
         .then((courses) => {
             res.status(200).json(courses);
         })
@@ -78,13 +80,14 @@ router.get('/course', (req, res) => {
 });
 
 // Ruta para obtener un curso específico por ID
-router.get('/course/:courseId', (req, res) => {
+router.get('/:courseId', isAuth, (req, res) => {
     const courseId = req.params.courseId;
     Course
         .findById(courseId)
         .populate("professor", "name")
+        .populate("lessons")
         .then((course) => {
-            if (!course) return res.status(404).json({ message: "Course not found" });
+            if (!course) return res.status(404).json({ message: `Course with ID ${courseId} not found` });
             res.status(200).json(course);
         })
         .catch((error) => {
@@ -93,36 +96,85 @@ router.get('/course/:courseId', (req, res) => {
         });
 });
 
-// Ruta para actualizar un curso (solo accesible por el profesor que creó el curso)
-router.put('/course/:courseId', isAuth, isProfessor, (req, res) => {
-    const { title, description, lessons } = req.body;
+// Ruta para actualizar un curso por ID (profesor puede actualizar título y descripción, admin puede actualizar todo)
+router.put('/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {
     const courseId = req.params.courseId;
+    const { title, description, professor } = req.body;
+
     Course
-        .findByIdAndUpdate(courseId, { title, description, lessons }, { new: true })
-        .then((updatedCourse) => {
-            if (!updatedCourse) return res.status(404).json({ message: "Course not found" });
-            console.log("Course updated");
-            res.status(200).json(updatedCourse);
+        .findById(courseId)
+        .then((course) => {
+            if (!course) {
+                return res.status(404).json({ message: "Course not found" });
+            }
+
+            if (course.professor.toString() !== req.user._id && req.user.role !== 'admin') {
+                return res.status(403).json({ message: "You are not authorized to update this course" });
+            }
+
+            if (req.user.role === 'admin' && professor) {
+                course.professor = professor;  
+            }
+
+            course.title = title || course.title;
+            course.description = description || course.description;
+
+            course
+                .save()
+                .then(updatedCourse => {
+                    res.status(200).json(updatedCourse);
+                })
+                .catch(err => {
+                    console.error("Error while saving the updated course", err.message);
+                    res.status(500).json({ error: "Error while saving the updated course" });
+                });
         })
-        .catch((error) => {
-            console.log("Error while updating the course", error.message);
-            res.status(500).json({ message: "Error while updating the course" });
+        .catch((err) => {
+            console.error("Error finding the course", err.message);
+            res.status(500).json({ error: "Error finding the course" });
         });
 });
 
-// Ruta para eliminar un curso (solo accesible por el profesor que creó el curso)
-router.delete('/course/:courseId', isAuth, isProfessor, (req, res) => {
+// Ruta para eliminar un curso
+router.delete('/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {
     const courseId = req.params.courseId;
+    const userId = req.user._id;
+
     Course
-        .findByIdAndDelete(courseId)
-        .then((deletedCourse) => {
-            if (!deletedCourse) return res.status(404).json({ message: "Course not found" });
-            res.status(200).json({ message: "Course deleted successfully" });
+        .findById(courseId)
+        .then((course) => {
+            if (!course) {
+                return res.status(404).json({ message: "Course not found" });
+            }
+
+            // Verificamos si el usuario es el creador del curso (profesor) o admin
+            if (course.professor.toString() !== userId && req.user.role !== 'admin') {
+                return res.status(403).json({ message: "You are not authorized to delete this course" });
+            }
+
+            // Eliminar todas las lecciones asociadas al curso
+            Lesson.deleteMany({ _id: { $in: course.lessons } })
+                .then(() => {
+                    // Eliminar el curso
+                    Course.findByIdAndDelete(courseId)
+                        .then(() => {
+                            res.status(200).json({ message: "Course and associated lessons deleted successfully" });
+                        })
+                        .catch((err) => {
+                            console.log("Error deleting course", err.message);
+                            res.status(500).json({ error: "Error deleting course" });
+                        });
+                })
+                .catch((err) => {
+                    console.log("Error deleting lessons", err.message);
+                    res.status(500).json({ error: "Error deleting lessons" });
+                });
         })
         .catch((error) => {
-            console.log("Error deleting course", error.message);
-            res.status(500).json({ error: "Failed to delete course" });
+            console.log("Error finding course", error.message);
+            res.status(500).json({ error: "Error finding course" });
         });
 });
+
 
 module.exports = router;

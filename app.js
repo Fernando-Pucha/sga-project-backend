@@ -9,6 +9,7 @@ require("./db/index");
 require("./models/Course.model");
 require("./models/User.model");
 require("./models/Enrollment.model");
+require("./models/Lesson.model");
 
 // Handles http requests (express is node js framework)
 // https://www.npmjs.com/package/express
@@ -28,6 +29,12 @@ app.use("/auth", authRoutes); */
 
 const authRoutes = require("./routes/user.routes");
 app.use("/user", authRoutes);
+
+const courseRoutes = require("./routes/course.routes");
+app.use("/course", courseRoutes);
+
+const lessonRoutes = require("./routes/lesson.routes");
+app.use("/course", lessonRoutes);
 
 // ❗ To handle errors. Routes that don't exist or errors that you handle in specific routes
 require("./error-handling")(app);
