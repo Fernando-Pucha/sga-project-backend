@@ -220,6 +220,7 @@ router.delete("/userdelete/:usersId", isAuth, isAdmin, (req, res) => {
     const usersId = req.params.usersId;
     User
         .findByIdAndDelete(usersId)
+        //Si es profesor o estudiante hay que buscar y ver en que curso esta inscrito reemplazar por uno generico
         .then((deletedUser) => {
             if (!deletedUser) return res.status(404).json({ message: "User not found" });
             res.status(200).json({ message: "User deleted successfully" });
