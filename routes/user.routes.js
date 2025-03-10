@@ -180,6 +180,24 @@ router.get("/users", isAuth, isAdmin, (req, res) => {
         });
 });
 
+// Obtener solo los usuarios con el rol de profesor
+router.get("/professors", isAuth, isAdmin, (req, res) => {
+    User
+        .find({ role: "profesor" })  // Filtra los usuarios por el rol "profesor"
+        .select("-password")  // No devuelve las contraseñas
+        .then((professors) => {
+            if (professors.length === 0) {
+                return res.status(404).json({ message: "No professors found" });
+            }
+            res.status(200).json(professors);
+        })
+        .catch((error) => {
+            console.error("Error retrieving professors:", error.message);
+            res.status(500).json({ message: "Error retrieving professors" });
+        });
+});
+
+
 // Ruta para que un admin vea el detalle de un usuario
 router.get("/userdetail/:userId", isAuth, isAdmin, (req, res) => {
     const userId = req.params.userId;
