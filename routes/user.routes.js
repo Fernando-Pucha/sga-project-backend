@@ -8,6 +8,11 @@ const { isAuthenticated } = require("../middleware/jwt.middleware.js");
 
 const saltRounds = 10;
 
+// Verificación del usuario autenticado
+router.get("/verify", isAuthenticated, (req, res, next) => {
+    res.status(200).json(req.payload);
+});
+
 // Registro de usuario (signup)
 router.post("/signup", (req, res) => {
     const { email, password, name, role } = req.body;
@@ -123,12 +128,12 @@ router.get("/profile", isAuth, (req, res) => {
 });
 
 router.put("/profile", isAuth, (req, res) => {
-    const { email, name, password, role} = req.body;
+    const { email, name, password, role } = req.body;
     const updateData = {};
     if (email) updateData.email = email;
     if (name) updateData.name = name;
     if (role) updateData.role = role;
-    
+
     if (password) {
 
         bcrypt.hash(password, saltRounds)
@@ -247,10 +252,5 @@ router.put("/userupdate/:userId", isAuth, isAdmin, (req, res) => {
     }
 });
 
-
-// Verificación del usuario autenticado
-router.get("/verify", isAuthenticated, (req, res, next) => {
-    res.status(200).json(req.payload);
-});
 
 module.exports = router;

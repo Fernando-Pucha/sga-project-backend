@@ -105,26 +105,8 @@ router.get('/mycourses', isAuth, isProfessor, (req, res) => {
         });
 });
 
-
-// Ruta para obtener un curso específico por ID
-router.get('/:courseId', isAuth, (req, res) => {
-    const courseId = req.params.courseId;
-    Course
-        .findById(courseId)
-        .populate("professor", "name")
-        /*  .populate("lessons") */
-        .then((course) => {
-            if (!course) return res.status(404).json({ message: `Course with ID ${courseId} not found` });
-            res.status(200).json(course);
-        })
-        .catch((error) => {
-            console.log("Error searching for course by id", error.message);
-            res.status(500).json({ message: "Failed to retrieve course id" });
-        });
-});
-
 // Ruta para actualizar un curso por ID (profesor puede actualizar título y descripción, admin puede actualizar todo)
-router.put('/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {
+router.put('/courseupdate/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {
     const courseId = req.params.courseId;
     const { title, description, professor } = req.body;
 
@@ -159,6 +141,23 @@ router.put('/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {
         .catch((err) => {
             console.error("Error finding the course", err.message);
             res.status(500).json({ error: "Error finding the course" });
+        });
+});
+
+// Ruta para obtener un curso específico por ID
+router.get('/:courseId', isAuth, (req, res) => {
+    const courseId = req.params.courseId;
+    Course
+        .findById(courseId)
+        .populate("professor", "name")
+        /*  .populate("lessons") */
+        .then((course) => {
+            if (!course) return res.status(404).json({ message: `Course with ID ${courseId} not found` });
+            res.status(200).json(course);
+        })
+        .catch((error) => {
+            console.log("Error searching for course by id", error.message);
+            res.status(500).json({ message: "Failed to retrieve course id" });
         });
 });
 

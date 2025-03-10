@@ -28,16 +28,16 @@ app.use("/api", indexRoutes);
 app.use("/auth", authRoutes); */
 
 const authRoutes = require("./routes/user.routes");
-app.use("/user", authRoutes);
+app.use("/api/user", authRoutes);
 
 const courseRoutes = require("./routes/course.routes");
-app.use("/course", courseRoutes);
+app.use("/api/course", courseRoutes);
 
 const lessonRoutes = require("./routes/lesson.routes");
-app.use("/lesson", lessonRoutes);
+app.use("/api/lesson", lessonRoutes);
 
 const enrollmentRoutes = require("./routes/enrollment.routes");
-app.use("/enrollments", enrollmentRoutes);
+app.use("/api/enrollments", enrollmentRoutes);
 
 // ❗ To handle errors. Routes that don't exist or errors that you handle in specific routes
 require("./error-handling")(app);
