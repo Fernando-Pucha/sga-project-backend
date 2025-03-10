@@ -86,6 +86,26 @@ router.get('/courses', isAuth, (req, res) => {
         });
 });
 
+// Ruta para obtener todos los cursos de un profesor logueado
+router.get('/mycourses', isAuth, isProfessor, (req, res) => {
+
+    const userId = req.user._id;
+
+    Course
+        .find({ professor: userId })
+        .then((courses) => {
+            if (!courses || courses.length === 0) {
+                return res.status(404).json({ message: "No courses found for this professor" });
+            }
+            res.status(200).json(courses);
+        })
+        .catch((error) => {
+            console.log("Error while fetching professor's courses", error.message);
+            res.status(500).json({ error: "Failed to retrieve courses" });
+        });
+});
+
+
 // Ruta para obtener un curso específico por ID
 router.get('/:courseId', isAuth, (req, res) => {
     const courseId = req.params.courseId;
@@ -102,29 +122,6 @@ router.get('/:courseId', isAuth, (req, res) => {
             res.status(500).json({ message: "Failed to retrieve course id" });
         });
 });
-
-// Ruta para obtener todos los cursos de un profesor logueado
-router.get('/mycourses', isAuth, isProfessor, (req, res) => {
-
-    const userId = req.user._id;
-
-    Course
-        .find({ professor: userId })
-        .populate('course')
-        .then((courses) => {
-            if (!courses || courses.length === 0) {
-                return res.status(404).json({ message: "No courses found for this professor" });
-            }
-            res.status(200).json(courses);
-        })
-        .catch((error) => {
-            console.log("Error while fetching professor's courses", error.message);
-            res.status(500).json({ error: "Failed to retrieve courses" });
-        });
-});
-
-
-
 
 // Ruta para actualizar un curso por ID (profesor puede actualizar título y descripción, admin puede actualizar todo)
 router.put('/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {

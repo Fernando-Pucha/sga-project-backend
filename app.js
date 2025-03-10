@@ -34,10 +34,10 @@ const courseRoutes = require("./routes/course.routes");
 app.use("/course", courseRoutes);
 
 const lessonRoutes = require("./routes/lesson.routes");
-app.use("/course", lessonRoutes);
+app.use("/lesson", lessonRoutes);
 
 const enrollmentRoutes = require("./routes/enrollment.routes");
-app.use("/course", enrollmentRoutes);
+app.use("/enrollments", enrollmentRoutes);
 
 // ❗ To handle errors. Routes that don't exist or errors that you handle in specific routes
 require("./error-handling")(app);

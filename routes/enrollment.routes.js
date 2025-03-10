@@ -84,11 +84,14 @@ router.delete('/:courseId/disenroll', isAuth, (req, res) => {
 
 
 // Ruta para obtener todas las inscripciones de un estudiante
-router.get('/enrollments', isAuth, (req, res) => {
+router.get('/', isAuth, (req, res) => {
     const studentId = req.user._id;
+    console.log("studentId", req.user);
+/*     res.status(200).json({ message: "Enrollments found" }); */
 
     Enrollment
-        .find({ student: ObjectId(`${studentId}`)})
+
+        .find({ student: studentId})
         .populate('course')
         .then((enrollments) => {
             if (!enrollments || enrollments.length === 0) {
