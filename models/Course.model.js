@@ -11,7 +11,7 @@ const courseSchema = new Schema(
     duration:{ type: Number, default: 20},
     language:{ type: String, enum: ["English", "French", "German", "Spanish"], default: "Spanish" },    
     category:{ type: String, enum: ["Development", "Programing", "Technology"], default: "Technology" },
-    image:{type: String, default: "https://i.blogs.es/8ba74b/man-2562325_1920/1200_800.webp"}
+    image:{type: String, default: "https://skr.es/wp-content/uploads/2022/05/evaluacion-politicas-publicas-web-scaled.jpg"}
   },
   {
     timestamps: true,
