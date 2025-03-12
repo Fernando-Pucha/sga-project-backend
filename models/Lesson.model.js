@@ -4,7 +4,7 @@ const lessonSchema = new Schema(
     {
         title: { type: String, required: true },
         content: { type: String, required: true },
-        videoUrl: { type: String, required: true },
+        videoUrl: { type: String},
         course: { type: Schema.Types.ObjectId, ref: "Course", required: true }, // Referencia al curso
     },
     {

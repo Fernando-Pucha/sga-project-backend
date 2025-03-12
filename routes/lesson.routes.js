@@ -5,7 +5,7 @@ const Lesson = require("../models/Lesson.model.js");
 const Course = require("../models/Course.model.js");
 
 // Ruta para crear una lección como profesor del curso o admin
-router.post('/:courseId/lessons', isAuth, isProfessorOrAdmin, (req, res) => {
+router.post('/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {
     const courseId = req.params.courseId;
     const { title, content, videoUrl } = req.body;
     const userId = req.user._id;
@@ -56,7 +56,7 @@ router.post('/:courseId/lessons', isAuth, isProfessorOrAdmin, (req, res) => {
 });
 
 // Ruta para obtener todas las lecciones de un curso
-router.get('/:courseId/lessons', isAuth, (req, res) => {
+router.get('/:courseId', isAuth, (req, res) => {
     const courseId = req.params.courseId;
 
     Course
