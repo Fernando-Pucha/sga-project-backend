@@ -181,7 +181,7 @@ router.get("/users", isAuth, isAdmin, (req, res) => {
 });
 
 // Obtener solo los usuarios con el rol de profesor
-router.get("/professors", isAuth, isAdmin, (req, res) => {
+router.get("/professors", isAuth, isProfessorOrAdmin, (req, res) => {
     User
         .find({ role: "profesor" })  // Filtra los usuarios por el rol "profesor"
         .select("-password")  // No devuelve las contraseñas

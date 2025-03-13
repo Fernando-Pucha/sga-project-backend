@@ -21,6 +21,9 @@ router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
     
     const professor = req.user.role === 'admin' ? professorId : req.user._id;
 
+    const courseImage = image || "https://skr.es/wp-content/uploads/2022/05/evaluacion-politicas-publicas-web-scaled.jpg";
+
+
     // Verificamos si el profesor existe en la base de datos (solo si el usuario es admin)
     if (req.user.role === 'admin' && professorId) {
         User
@@ -32,7 +35,7 @@ router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
 
                 // Si el profesor existe, creamos el curso
                 Course
-                    .create({ title, description, professor, price, duration, language,category,image })
+                    .create({ title, description, professor, price, duration, language,category,image: courseImage})
                     .then((createCourse) => {
 
                         // Devolver el curso con el ID del profesor
@@ -59,7 +62,7 @@ router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
     } else {
         // Si el usuario es un profesor, asignamos su propio ID como el profesor
         Course
-            .create({ title, description, professor, price, duration, language,category,image })
+            .create({ title, description, professor, price, duration, language,category,image: courseImage })
             .then((createCourse) => {
                 console.log("Course created");
                 res.status(201).json(createCourse);
