@@ -9,7 +9,7 @@ const router = express.Router();
 
 // Ruta para crear un curso (accesible por profesores y administradores)
 router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
-    const { title, description, professorId, price, duration, language,category,image } = req.body;
+    const { title, description, professorId, price, duration, language, category, image } = req.body;
 
     // Verificamos si el usuario es admin y si profesorId está presente
     if (req.user.role === 'admin' && !professorId) {
@@ -18,7 +18,7 @@ router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
 
     // Si el usuario es admin, podemos asignar un profesor diferente
     // Si el usuario es un profesor, asignamos automáticamente su ID
-    
+
     const professor = req.user.role === 'admin' ? professorId : req.user._id;
 
     const courseImage = image || "https://skr.es/wp-content/uploads/2022/05/evaluacion-politicas-publicas-web-scaled.jpg";
@@ -35,7 +35,7 @@ router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
 
                 // Si el profesor existe, creamos el curso
                 Course
-                    .create({ title, description, professor, price, duration, language,category,image: courseImage})
+                    .create({ title, description, professor, price, duration, language, category, image: courseImage })
                     .then((createCourse) => {
 
                         // Devolver el curso con el ID del profesor
@@ -62,7 +62,7 @@ router.post('/create', isAuth, isProfessorOrAdmin, (req, res) => {
     } else {
         // Si el usuario es un profesor, asignamos su propio ID como el profesor
         Course
-            .create({ title, description, professor, price, duration, language,category,image: courseImage })
+            .create({ title, description, professor, price, duration, language, category, image: courseImage })
             .then((createCourse) => {
                 console.log("Course created");
                 res.status(201).json(createCourse);
@@ -111,7 +111,7 @@ router.get('/mycourses', isAuth, isProfessor, (req, res) => {
 // Ruta para actualizar un curso por ID (profesor puede actualizar título y descripción, admin puede actualizar todo)
 router.put('/courseupdate/:courseId', isAuth, isProfessorOrAdmin, (req, res) => {
     const courseId = req.params.courseId;
-    const { title, description, professor, price, duration, language,category,image } = req.body;
+    const { title, description, professor, price, duration, language, category, image } = req.body;
 
     Course
         .findById(courseId)
@@ -128,9 +128,14 @@ router.put('/courseupdate/:courseId', isAuth, isProfessorOrAdmin, (req, res) => 
                 course.professor = professor;
             }
 
+            if (price > 0) {
+                course.price = price || course.price;
+            } else {
+                course.price = 0;
+            }
+
             course.title = title || course.title;
             course.description = description || course.description;
-            course.price = price || course.price;
             course.duration = duration || course.duration;
             course.language = language || course.language;
             course.category = category || course.category;
