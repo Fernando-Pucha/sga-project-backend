@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User.model.js");
 const { isAuth, isAdmin, isProfessorOrAdmin } = require("../middleware/auth.middleware.js");
 const { isAuthenticated } = require("../middleware/jwt.middleware.js");
+const fileUploader = require("../config/cloudinary.config.js");
 
 const saltRounds = 10;
 
@@ -128,11 +129,12 @@ router.get("/profile", isAuth, (req, res) => {
 });
 
 router.put("/profile", isAuth, (req, res) => {
-    const { email, name, password, role } = req.body;
+    const { email, name, password, role, imageUrl} = req.body;
     const updateData = {};
     if (email) updateData.email = email;
     if (name) updateData.name = name;
     if (role) updateData.role = role;
+    if (imageUrl) updateData.imageUrl = imageUrl;
 
     if (password) {
 
@@ -197,6 +199,20 @@ router.get("/professors", isAuth, isProfessorOrAdmin, (req, res) => {
         });
 });
 
+// POST "/api/upload" => Route that receives the image, sends it to Cloudinary via the fileUploader and returns the image URL
+router.post("/upload", fileUploader.single("imageUrl"), (req, res, next) => {
+    // console.log("file is: ", req.file)
+   
+    if (!req.file) {
+      next(new Error("No file uploaded!"));
+      return;
+    }
+    
+    // Get the URL of the uploaded file and send it as a response.
+    // 'fileUrl' can be any name, just make sure you remember to use the same when accessing it on the frontend
+    
+    res.json({ fileUrl: req.file.path });
+  });
 
 // Ruta para que un admin vea el detalle de un usuario
 router.get("/userdetail/:userId", isAuth, isAdmin, (req, res) => {
@@ -234,13 +250,14 @@ router.delete("/userdelete/:usersId", isAuth, isAdmin, (req, res) => {
 // Actualizar usuario (solo admin)
 router.put("/userupdate/:userId", isAuth, isAdmin, (req, res) => {
     const userId = req.params.userId;
-    const { email, name, password, role } = req.body;
+    const { email, name, password, role, imageUrl } = req.body;
 
     // Datos a actualizar
     const updateData = {};
     if (email) updateData.email = email;
     if (name) updateData.name = name;
     if (role) updateData.role = role;
+    if (imageUrl) updateData.imageUrl = imageUrl;
 
     if (password) {
         bcrypt.hash(password, saltRounds)

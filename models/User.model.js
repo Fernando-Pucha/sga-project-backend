@@ -6,7 +6,7 @@ const userSchema = new Schema(
     password: {type: String,required: [true, "Password is required."] },
     name: {type: String,required: [true, "Name is required."]},
     role: { type: String, enum: ["admin", "profesor", "estudiante"], default: "estudiante" },
-    /* image:{type: String, default: "https://st4.depositphotos.com/11574170/25191/v/450/depositphotos_251916955-stock-illustration-user-glyph-color-icon.jpg"} */
+    imageUrl:{type: String, default: "https://st4.depositphotos.com/11574170/25191/v/450/depositphotos_251916955-stock-illustration-user-glyph-color-icon.jpg"}
   },
   {
     timestamps: true,
