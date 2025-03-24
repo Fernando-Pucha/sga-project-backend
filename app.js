@@ -39,6 +39,10 @@ app.use("/api/lesson", lessonRoutes);
 const enrollmentRoutes = require("./routes/enrollment.routes");
 app.use("/api/enrollments", enrollmentRoutes);
 
+const aiRoutes = require("./routes/ai.routes");
+app.use("/api/ai", aiRoutes);
+
+
 // ❗ To handle errors. Routes that don't exist or errors that you handle in specific routes
 require("./error-handling")(app);
 
