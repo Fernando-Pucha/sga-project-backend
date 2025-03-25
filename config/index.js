@@ -12,6 +12,7 @@ const cookieParser = require("cookie-parser");
 // ℹ️ Needed to accept requests from 'the outside'. CORS stands for cross origin resource sharing
 // unless the request is made from the same domain, by default express wont accept POST requests
 const cors = require("cors");
+/* const { aiLimiter } = require("../middleware/rateLimit.middleware"); */
 
 const FRONTEND_URL = process.env.ORIGIN || "http://localhost:3000";
 
@@ -36,4 +37,5 @@ module.exports = (app) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
+  /* app.use(aiLimiter); */
 };
