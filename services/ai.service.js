@@ -59,13 +59,23 @@ async function chatbot(question, userId) {
       throw new Error("Usuario no encontrado");
     }
 
-    let courses, lessons, users, enrollments;
+    let courses, lessons, users, enrollments, totalCourses, allCourses;
+
+    // Obtener todos los cursos para todos los roles
+    allCourses = await Course.find({})
+      .populate('professor', 'name email')
+      .populate('lessons');
+
+    // Obtener total de cursos para todos los roles
+    totalCourses = allCourses.length;
+
     // Filtrar información según el rol
     switch (user.role) {
       case 'admin':
         // Admins pueden ver toda la información
-        courses = await Course.find({}).populate('professor', 'name email role').populate('lessons');
-        lessons = await Lesson.find({}).populate('course', 'title');
+        courses = allCourses;
+        lessons = await Lesson.find({})
+          .populate('course', 'title');
         users = await User.find({}, 'name email role createdAt');
         enrollments = await Enrollment.find({})
           .populate('student', 'name email')
@@ -74,21 +84,26 @@ async function chatbot(question, userId) {
 
       case 'profesor':
         // Profesores ven sus propios cursos, lecciones y estudiantes inscritos
-        courses = await Course.find({ professor: userId });
+        courses = await Course.find({ professor: userId })
+          .populate('professor', 'name email')
+          .populate('lessons');
         const professorCourseIds = courses.map(course => course._id);
         lessons = await Lesson.find({ course: { $in: professorCourseIds } });
         enrollments = await Enrollment.find({
           course: { $in: professorCourseIds }
         }).populate('student', 'name email');
-
-console.log("Estudiantes inscritos",enrollments)
-
         break;
 
       case 'estudiante':
         // Estudiantes ven solo los cursos en los que están inscritos
         enrollments = await Enrollment.find({ student: userId })
-          .populate('course');
+          .populate({
+            path: 'course',
+            populate: {
+              path: 'professor',
+              select: 'name email'
+            }
+          });
         courses = enrollments.map(enrollment => enrollment.course);
         lessons = await Lesson.find({
           course: { $in: courses.map(course => course._id) }
@@ -100,13 +115,17 @@ console.log("Estudiantes inscritos",enrollments)
     }
 
     // Crear contexto personalizado según el rol
-
     const context = `
-      ${user.role === 'admin' ? 'Información completa del sistema' :
-        user.role === 'professor' ? 'Información de tus cursos' :
-          'Información de tus cursos inscritos'}:
+        ${user.role === 'admin' ? 'Información completa del sistema' :
+          user.role === 'profesor' ? 'Información de tus cursos y todos los cursos disponibles' :
+            'Información de tus cursos inscritos y todos los cursos disponibles'}:
+  
+        Estadísticas generales:
+        - Total de cursos en la plataforma: ${totalCourses}
+        ${user.role === 'profesor' ? `- Total de tus cursos: ${courses.length}` : ''}
+        ${user.role === 'estudiante' ? `- Total de cursos inscritos: ${courses.length}` : ''}
 
-       ${user.role === 'admin' ? `
+        ${user.role === 'admin' ? `
         Información de usuarios:
         Total usuarios: ${users.length}
         ${users.map(user => `
@@ -117,33 +136,48 @@ console.log("Estudiantes inscritos",enrollments)
         `).join('\n')}
         ` : ''}
 
-      Cursos disponibles:
-      ${courses.map(course => `
-        - ${course.title}
-        - Descripción: ${course.description}
-        - Categoría: ${course.category}
-        - Duración: ${course.duration}
-        - Idioma: ${course.language}
-        - Precio: ${course.price}
-        - Lecciones:${course.lessons.join()}
-        ${user.role === 'admin' ? `- Profesor: ${course.professor.name} (${course.professor.email})` : ''}
-        ${user.role === 'admin' || user.role === 'profesor' ?
-              `- Estudiantes inscritos: ${enrollments.filter(e => e.course._id.toString() === course._id.toString()).length
-            }
-        ${enrollments
-                .filter(e => e.course._id.toString() === course._id.toString())
-                .map(e => `  * ${e.student.name} (${e.student.email})`)
-                .join('\n')
-              }` : ''
-        }        
-      `).join('\n')}
+        ${user.role !== 'admin' ? `
+        Todos los cursos disponibles:
+        ${allCourses.map(course => `
+          - ${course.title}
+          - Descripción: ${course.description}
+          - Categoría: ${course.category}
+          - Duración: ${course.duration}
+          - Idioma: ${course.language}
+          - Precio: ${course.price}
+          - Profesor: ${course.professor ? course.professor.name : 'No asignado'}
+        `).join('\n')}
+        ` : ''}
 
-      Lecciones disponibles:
-      ${lessons.map(lesson => `
-        - ${lesson.title}
-        - Contenido: ${lesson.content && lesson.content.substring(0, 100)}...
-      `).join('\n')}
-    `;
+        ${user.role !== 'admin' ? `
+        ${user.role === 'profesor' ? 'Tus cursos:' : 'Tus cursos inscritos:'}
+        ` : 'Cursos:'}
+        ${courses.map(course => `
+          - ${course.title}
+          - Descripción: ${course.description}
+          - Categoría: ${course.category}
+          - Duración: ${course.duration}
+          - Idioma: ${course.language}
+          - Precio: ${course.price}
+          ${course.professor ? `- Profesor: ${course.professor.name}` : ''}
+          ${user.role === 'admin' || user.role === 'profesor' ?
+                      `- Estudiantes inscritos: ${enrollments.filter(e => e.course._id.toString() === course._id.toString()).length
+                      }
+            ${enrollments
+                        .filter(e => e.course._id.toString() === course._id.toString())
+                        .map(e => `  * ${e.student.name} (${e.student.email})`)
+                        .join('\n')
+                      }` : ''
+                    }
+          - Total de lecciones: ${course.lessons ? course.lessons.length : 0}
+        `).join('\n')}
+
+        Lecciones disponibles:
+        ${lessons.map(lesson => `
+          - ${lesson.title}
+          - Contenido: ${lesson.content && lesson.content.substring(0, 100)}...
+        `).join('\n')}
+      `;
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
