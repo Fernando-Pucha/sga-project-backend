@@ -11,9 +11,11 @@ async function generateSummary(text) {
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    
+
     const prompt = `Por favor, genera un resumen conciso del siguiente texto, 
-                    destacando los puntos principales y manteniéndolo claro y coherente: 
+                    destacando los puntos principales y manteniéndolo claro y coherente,
+                    además si es necesario formatea la respuesta con salto de línea (\\n) para separar párrafos y listas y
+                    usa (-) para las listas en lugar de asteriscos (*).
                     
                     ${text}`;
 
@@ -33,7 +35,9 @@ async function generateShortContent(topic) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `Por favor, genera un contenido breve y preciso sobre el siguiente tema, 
-                    destacando lo más relevante de manera clara y concisa:
+                    destacando lo más relevante de manera clara y concisa, 
+                    además formatea la respuesta con salto de línea (\\n) para separar párrafos y listas,
+                    usa (-) para las listas en lugar de asteriscos (*).
 
                     ${topic}`;
 
@@ -55,42 +59,63 @@ async function chatbot(question, userId) {
       throw new Error("Usuario no encontrado");
     }
 
-    let courses, lessons;
+    let courses, lessons, users, enrollments;
     // Filtrar información según el rol
     switch (user.role) {
       case 'admin':
         // Admins pueden ver toda la información
-        courses = await Course.find({}).populate('professor', 'name').populate('lessons');
+        courses = await Course.find({}).populate('professor', 'name email role').populate('lessons');
         lessons = await Lesson.find({}).populate('course', 'title');
-        /* enrollments = await Enrollment.find({}).populate('course', 'title'); */
+        users = await User.find({}, 'name email role createdAt');
+        enrollments = await Enrollment.find({})
+          .populate('student', 'name email')
+          .populate('course', 'title');
         break;
-        
+
       case 'profesor':
-        // Profesores ven sus propios cursos y lecciones
+        // Profesores ven sus propios cursos, lecciones y estudiantes inscritos
         courses = await Course.find({ professor: userId });
         const professorCourseIds = courses.map(course => course._id);
         lessons = await Lesson.find({ course: { $in: professorCourseIds } });
+        enrollments = await Enrollment.find({
+          course: { $in: professorCourseIds }
+        }).populate('student', 'name email');
+
+console.log("Estudiantes inscritos",enrollments)
+
         break;
-        
+
       case 'estudiante':
         // Estudiantes ven solo los cursos en los que están inscritos
-        const enrollments = await Enrollment.find({ student: userId })
+        enrollments = await Enrollment.find({ student: userId })
           .populate('course');
         courses = enrollments.map(enrollment => enrollment.course);
-        lessons = await Lesson.find({ 
+        lessons = await Lesson.find({
           course: { $in: courses.map(course => course._id) }
         });
         break;
-        
+
       default:
         throw new Error("Rol de usuario no válido");
     }
-    console.log("contenido de cursos", courses)
-    // Crear contexto personalizado según el rol ${user.role === 'admin' ? `- Profesor: ${course.professor.username}` : ''}
+
+    // Crear contexto personalizado según el rol
+
     const context = `
-      ${user.role === 'admin' ? 'Información completa del sistema' : 
-       user.role === 'professor' ? 'Información de tus cursos' : 
-       'Información de tus cursos inscritos'}:
+      ${user.role === 'admin' ? 'Información completa del sistema' :
+        user.role === 'professor' ? 'Información de tus cursos' :
+          'Información de tus cursos inscritos'}:
+
+       ${user.role === 'admin' ? `
+        Información de usuarios:
+        Total usuarios: ${users.length}
+        ${users.map(user => `
+          - Username: ${user.name}
+          - Email: ${user.email}
+          - Role: ${user.role}
+          - Fecha de registro: ${user.createdAt}
+        `).join('\n')}
+        ` : ''}
 
       Cursos disponibles:
       ${courses.map(course => `
@@ -101,7 +126,16 @@ async function chatbot(question, userId) {
         - Idioma: ${course.language}
         - Precio: ${course.price}
         - Lecciones:${course.lessons.join()}
-        - ${user.role === 'admin' ? `- Profesor: ${course.professor.name}` : ''}
+        ${user.role === 'admin' ? `- Profesor: ${course.professor.name} (${course.professor.email})` : ''}
+        ${user.role === 'admin' || user.role === 'profesor' ?
+              `- Estudiantes inscritos: ${enrollments.filter(e => e.course._id.toString() === course._id.toString()).length
+            }
+        ${enrollments
+                .filter(e => e.course._id.toString() === course._id.toString())
+                .map(e => `  * ${e.student.name} (${e.student.email})`)
+                .join('\n')
+              }` : ''
+        }        
       `).join('\n')}
 
       Lecciones disponibles:
@@ -112,12 +146,14 @@ async function chatbot(question, userId) {
     `;
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    
+
     const prompt = `
       Actúa como un asistente académico experto para un ${user.role}.
       Usa la siguiente información filtrada según el rol del usuario
       para responder la pregunta. Si la información no está disponible
-      en el contexto, indica que no tienes acceso a esa información.
+      en el contexto, indica que no tienes acceso a esa información,
+      además formatea la respuesta con salto de línea (\\n) para separar párrafos y listas,
+      usa (-) para las listas en lugar de asteriscos (*).
 
       Contexto:
       ${context}
